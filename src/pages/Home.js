@@ -10,14 +10,17 @@ import moment from "moment";
 import { Web3Button } from "@web3modal/react";
 import { useAccount, useDisconnect } from "wagmi";
 import { getContract } from "@wagmi/core";
+import Web3 from "web3";
 
 function Home(props) {
   const { client } = props;
+  const account = client.getAccount().address;
   const chain = client.getNetwork();
-  const acc = client.getAccount();
   const { isConnected } = useAccount();
-  const { library, account, isActive, chainId, handleWalletModal } = useMetaMask();
-  var web3Obj = library;
+  // const { library, isActive, handleWalletModal } = useMetaMask();
+  console.log(chain);
+  let chainId = chain.chain ? chain.chain.id : "";
+  var web3Obj = new Web3(window.ethereum);
 
   var Router = "0xD578BF8Cc81A89619681c5969D99ea18A609C0C3";
   var tokenAddress = "0x8FFf93E810a2eDaaFc326eDEE51071DA9d398E83";
@@ -257,12 +260,12 @@ function Home(props) {
 
   useEffect(() => {
     if (chainId === 56) {
-      if (isActive) {
+      if (isConnected) {
         checkAllowance();
       }
     }
     getStackerInfo();
-  }, [isActive, account, chainId]);
+  }, [isConnected, account, chainId]);
 
   return (
     <>
@@ -384,7 +387,7 @@ function Home(props) {
                   <h4>locked until {timeperiodDate}</h4>
 
                   {isConnected ? (
-                    chain.chain.id === 56 ? (
+                    chainId === 56 ? (
                       isAllowance ? (
                         <button onClick={() => approve()} disabled={loading} className="btn btn-danger">
                           {loading ? "Please wait, Loading.." : "Enable"}
