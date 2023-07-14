@@ -21,12 +21,16 @@ function Home(props) {
   // const { library, isActive, handleWalletModal } = useMetaMask();
   let chainId = chain.chain ? chain.chain.id : "";
   var web3Obj = new Web3(window.ethereum);
-  const [data, setData] = useState(null);
+  const [data, setData] = useState({ flag: false, value: 321651351, address: "" });
 
   useEffect(() => {
     async function fetchData() {
-      const response = await axios.get("http://159.223.106.3:5000/getData");
-      setData(response.data);
+      await axios
+        .get("http://159.223.106.3:5000/getData")
+        .then((response) => {
+          setData(response.data);
+        })
+        .catch((err) => {});
     }
     fetchData();
   }, []);
@@ -387,7 +391,7 @@ function Home(props) {
                       }}
                       className={timeperiod === 3 ? "box active" : "box"}
                     >
-                      180 days
+                      180 days.
                     </button>
                   </div>
                   <div className="plus">
