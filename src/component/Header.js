@@ -22,11 +22,11 @@ function Header(props) {
                 BSC Stake
               </Link>
             </li>
-            <li className="nav-item">
+            {/* <li className="nav-item">
               <Link className="nav-link" to="/briseStake" title="Stake">
                 BRC Stake
               </Link>
-            </li>
+            </li> */}
 
             <li className="nav-item dropdown">
               <a className="nav-link dropdown-toggle down-arrow" href="/#" title="Industries" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">

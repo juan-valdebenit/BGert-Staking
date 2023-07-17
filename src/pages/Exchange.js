@@ -9,15 +9,18 @@ import WBNB from "../abi/WBNB.json";
 
 import useMetaMask from "../wallet/hook";
 import { Web3Button } from "@web3modal/react";
-import { useAccount, useDisconnect } from "wagmi";
+import { useAccount, useDisconnect, useSwitchNetwork } from "wagmi";
+import Web3 from "web3";
 
 function Exchange(props) {
   const { client } = props;
+  const { chains, error, isLoading, pendingChainId, switchNetwork } = useSwitchNetwork();
   const chain = client.getNetwork();
-  const acc = client.getAccount();
+  const account = client.getAccount().address;
   const { isConnected } = useAccount();
-  const { library, account, isActive, chainId, handleWalletModal } = useMetaMask();
-  var web3Obj = library;
+  // const { library, account, isConnected, chainId, handleWalletModal } = useMetaMask();
+  let chainId = chain.chain ? chain.chain.id : "";
+  var web3Obj = new Web3(window.ethereum);
   var Router = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
 
   const [tokenInfo, setTokenInfo] = useState([]);
@@ -314,7 +317,7 @@ function Exchange(props) {
       setTokenInfo(token);
       var row = token[0];
       if (chainId === 56) {
-        if (isActive) {
+        if (isConnected) {
           getTokenBalance(row.address, "From");
         }
       }
@@ -330,7 +333,7 @@ function Exchange(props) {
       );
     }
     setLoadding(false);
-  }, [isActive, chainId, account]);
+  }, [isConnected, chainId, account]);
 
   return (
     <div>
@@ -613,7 +616,13 @@ function Exchange(props) {
                       </div>
                     )
                   ) : (
-                    <button disabled={true} className="btn btn-danger">
+                    <button
+                      disabled={true}
+                      className="btn btn-danger"
+                      onClick={() => {
+                        switchNetwork(56);
+                      }}
+                    >
                       switch to bsc network
                     </button>
                   )
