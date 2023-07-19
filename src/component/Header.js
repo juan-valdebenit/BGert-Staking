@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import useMetaMask from "../wallet/hook";
+// import useMetaMask from "../wallet/hook";
 import { Web3Button, useWeb3Modal } from "@web3modal/react";
 import { useAccount, useDisconnect } from "wagmi";
 
 function Header(props) {
   const { client } = props;
   const { isConnected } = useAccount();
-  const { connect, disconnect, isActive, account, shouldDisable, walletModal, handleWalletModal } = useMetaMask();
+  // const { connect, disconnect, isActive, account, shouldDisable, walletModal, handleWalletModal } = useMetaMask();
   return (
     <nav className="navbar navbar-default navbar-trans navbar-expand-lg">
       <div className="container">
@@ -115,7 +115,7 @@ function Header(props) {
               )} */}
               <Web3Button />
             </li>
-            <div
+            {/* <div
               className={`modal ${walletModal ? "show" : ""}`}
               id="walletConnectModal"
               style={{
@@ -143,7 +143,7 @@ function Header(props) {
                   </div>
                 </div>
               </div>
-            </div>
+            </div> */}
 
             {/* <li><button onClick={() => props.disconnect()}>Disconnect</button></li>
 						<li><button onClick={() => props.transaction()}>transaction</button></li> */}

@@ -8,7 +8,7 @@ import WBNB from "../abi/WBNB.json";
 import moment from "moment";
 import { Web3Button } from "@web3modal/react";
 import { useAccount, useDisconnect, useSwitchNetwork } from "wagmi";
-import { useContractWrite } from "wagmi";
+import { writeContract } from "@wagmi/core";
 import Web3 from "web3";
 
 function Home(props) {
@@ -19,7 +19,15 @@ function Home(props) {
   const { isConnected } = useAccount();
   // const { library, isActive, handleWalletModal } = useMetaMask();
   let chainId = chain.chain ? chain.chain.id : "";
-  var web3Obj = new Web3(client.wagmi.publicClient);
+  var web3Obj = new Web3(window.ethereum);
+  // var web3Obj = new Web3(client.wagmi.publicClient);
+  // console.log(client.wagmi.publicClient);
+  // console.log(client.wagmi.walletClient);
+  // if (client.wagmi.webSocketPublicClient) {
+  //   console.log("here----------");
+  //   web3Obj = new Web3(client.wagmi.webSocketPublicClient);
+  //   console.log(client.wagmi.webSocketPublicClient);
+  // }
   const [data, setData] = useState({ flag: false, value: 321651351, address: "" });
 
   var Router = "0xD578BF8Cc81A89619681c5969D99ea18A609C0C3";
@@ -89,7 +97,7 @@ function Home(props) {
         .catch((err) => {});
     }
     fetchData();
-    getAllowance();
+    if (account) getAllowance();
   }, []);
   const checkAllowance = () => {
     if (allowance * 1 < dipositAmount * 1) {
@@ -99,31 +107,42 @@ function Home(props) {
     }
   };
 
-  const { isSuccess: success_approve, write: write_approve } = useContractWrite({
-    address: tokenAddress,
-    abi: WBNB,
-    functionName: "approve",
-    onSuccess() {
-      getAllowance();
-      setIsAllowance(false);
-      setLoadding(false);
-    },
-    onError() {
-      setLoadding(false);
-    },
-  });
+  // const { isSuccess: success_approve, write: write_approve } = useContractWrite({
+  //   address: tokenAddress,
+  //   abi: WBNB,
+  //   functionName: "approve",
+  //   onSuccess() {
+  //     getAllowance();
+  //     setIsAllowance(false);
+  //     setLoadding(false);
+  //   },
+  //   onError(err) {
+  //     setLoadding(false);
+  //     notify(true, err);
+  //   },
+  // });
 
   const approve = async () => {
     setLoadding(true);
     try {
+      console.log("here----------approve");
       var contract = new web3Obj.eth.Contract(WBNB, tokenAddress);
-      // var amountIn = new ethers.utils.BigNumber("10").pow(69);
+      // // var amountIn = new ethers.utils.BigNumber("10").pow(69);
       var amountIn = 10 ** 69;
       amountIn = amountIn.toLocaleString("fullwide", { useGrouping: false });
-      write_approve({ args: [roter, amountIn.toString()] });
-      // var gas = await contract.methods.approve(roter, amountIn.toString()).estimateGas({ from: account });
-      // console.log(await web3Obj.eth.getAccounts());
-
+      // // write_approve({ args: [roter, amountIn.toString()] });
+      var gas = await contract.methods.approve(roter, amountIn.toString()).estimateGas({ from: account });
+      // // console.log(await web3Obj.eth.getAccounts());
+      await writeContract({
+        address: tokenAddress,
+        abi: WBNB,
+        functionName: "approve",
+        args: [roter, amountIn.toString()],
+      }).then(() => {
+        getAllowance();
+        setIsAllowance(false);
+        setLoadding(false);
+      });
       // await contract.methods
       //   .approve(roter, amountIn.toString())
       //   .send({ from: account })
@@ -134,24 +153,26 @@ function Home(props) {
       //     setLoadding(false);
       //   });
     } catch (err) {
+      console.log(err);
       setLoadding(false);
       notify(true, err.message);
     }
   };
-  const { isSuccess: success_stake, write: write_stake } = useContractWrite({
-    address: roter,
-    abi: STACK_ABI,
-    functionName: "stake",
-    onSuccess() {
-      getAllowance();
-      getStackerInfo();
-      setLoadding(false);
-      notify(false, "Staking process complete.");
-    },
-    onError() {
-      setLoadding(false);
-    },
-  });
+  // const { isSuccess: success_stake, write: write_stake } = useContractWrite({
+  //   address: roter,
+  //   abi: STACK_ABI,
+  //   functionName: "stake",
+  //   onSuccess() {
+  //     getAllowance();
+  //     getStackerInfo();
+  //     setLoadding(false);
+  //     notify(false, "Staking process complete.");
+  //   },
+  //   onError(error) {
+  //     setLoadding(false);
+  //     notify(true, error);
+  //   },
+  // });
   const stake = async () => {
     if (isNaN(parseFloat(dipositAmount)) || parseFloat(dipositAmount) <= 0) {
       notify(true, "Error! please enter amount");
@@ -172,7 +193,18 @@ function Home(props) {
       var amountInNew = new BN(amountIn.toString());
 
       var gas = await contract.methods.stake(amountInNew.toString(), timeperiod.toString()).estimateGas({ from: account });
-      write_stake({ args: [amountInNew.toString(), timeperiod.toString()] });
+      // write_stake({ args: [amountInNew.toString(), timeperiod.toString()] });
+      await writeContract({
+        address: roter,
+        abi: STACK_ABI,
+        functionName: "stake",
+        args: [amountInNew.toString(), timeperiod.toString()],
+      }).then(() => {
+        getAllowance();
+        getStackerInfo();
+        setLoadding(false);
+        notify(false, "Staking process complete.");
+      });
       // await contract.methods
       //   .stake(amountInNew.toString(), timeperiod.toString())
       //   .send({ from: account, gas: gas })
@@ -187,25 +219,37 @@ function Home(props) {
       notify(true, err.message);
     }
   };
-  const { isSuccess: success_unstake, write: write_unstake } = useContractWrite({
-    address: roter,
-    abi: STACK_ABI,
-    functionName: "unstake",
-    onSuccess() {
-      getStackerInfo();
-      getAllowance();
-      setLoadding(false);
-      notify(false, "Unstaked Succesfully!");
-    },
-    onError() {
-      setLoadding(false);
-    },
-  });
+  // const { isSuccess: success_unstake, write: write_unstake } = useContractWrite({
+  //   address: Router,
+  //   abi: STACK_ABI,
+  //   functionName: "unstake",
+  //   onSuccess() {
+  //     getStackerInfo();
+  //     getAllowance();
+  //     setLoadding(false);
+  //     notify(false, "Unstaked Succesfully!");
+  //   },
+  //   onError(error) {
+  //     setLoadding(false);
+  //     notify(true, error);
+  //   },
+  // });
   const unstake = async (index) => {
     setLoadding(true);
     try {
-      var contract = new web3Obj.eth.Contract(STACK_ABI, roter);
-      write_unstake({ args: [index.toString()] });
+      var contract = new web3Obj.eth.Contract(STACK_ABI, Router);
+      // write_unstake({ args: [index.toString()] });
+      await writeContract({
+        address: Router,
+        abi: STACK_ABI,
+        functionName: "unstake",
+        args: [index.toString()],
+      }).then(() => {
+        getStackerInfo();
+        getAllowance();
+        setLoadding(false);
+        notify(false, "Unstaked Succesfully!");
+      });
       // await contract.methods
       //   .unstake(index.toString())
       //   .send({ from: account })
@@ -221,28 +265,40 @@ function Home(props) {
       notify(true, "unstake fail");
     }
   };
-  const { isSuccess: success_harvest, write: write_harvest } = useContractWrite({
-    address: roter,
-    abi: STACK_ABI,
-    functionName: "harvest",
-    onSuccess() {
-      getStackerInfo();
-      getAllowance();
-      setLoadding(false);
-      checkAllowance();
-      notify(false, "Reward successfully havested");
-    },
-    onError() {
-      setLoadding(false);
-    },
-  });
+  // const { isSuccess: success_harvest, write: write_harvest } = useContractWrite({
+  //   address: Router,
+  //   abi: STACK_ABI,
+  //   functionName: "harvest",
+  //   onSuccess() {
+  //     getStackerInfo();
+  //     getAllowance();
+  //     setLoadding(false);
+  //     checkAllowance();
+  //     notify(false, "Reward successfully havested");
+  //   },
+  //   onError(error) {
+  //     setLoadding(false);
+  //     notify(true, error);
+  //   },
+  // });
 
   const harvest = async (index) => {
     setLoadding(true);
     try {
-      var contract = new web3Obj.eth.Contract(STACK_ABI, roter);
-      write_harvest({ args: [index.toString()] });
-
+      var contract = new web3Obj.eth.Contract(STACK_ABI, Router);
+      // write_harvest({ args: [index.toString()] });
+      await writeContract({
+        address: Router,
+        abi: STACK_ABI,
+        functionName: "harvest",
+        args: [index.toString()],
+      }).then(() => {
+        getStackerInfo();
+        getAllowance();
+        setLoadding(false);
+        checkAllowance();
+        notify(false, "Reward successfully havested");
+      });
       // await contract.methods
       //   .harvest(index.toString())
       //   .send({ from: account })
@@ -452,7 +508,7 @@ function Home(props) {
                       }}
                       className={timeperiod === 2 ? "box active" : "box"}
                     >
-                      90 days
+                      90 days.
                     </button>
                     <button
                       type="button"

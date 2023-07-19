@@ -12,15 +12,17 @@ import Exchange from "./pages/Exchange";
 
 const chains = [bsc];
 const projectId = "eaf4d7570223c6f49e21a36adeabc6a6";
-const { publicClient } = configureChains(chains, [w3mProvider({ projectId })]);
+const { publicClient, webSocketPublicClient } = configureChains(chains, [w3mProvider({ projectId })]);
 const wagmiConfig = createConfig({
   autoConnect: true,
   connectors: w3mConnectors({ projectId, chains }),
   publicClient,
+  webSocketPublicClient,
 });
 
 function App() {
   const ethereumClient = new EthereumClient(wagmiConfig, chains);
+  console.log("ethereumClient", ethereumClient);
   return (
     <div>
       <WagmiConfig config={wagmiConfig}>
