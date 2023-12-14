@@ -7,7 +7,6 @@ export function tokenList(search = "") {
     .toLowerCase()
     .split(/\s+/)
     .filter((s) => s.length > 0);
-
   const matchesSearch = (s) => {
     const sParts = s
       .toLowerCase()

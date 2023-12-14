@@ -7,16 +7,15 @@ import useMetaMask from "../wallet/hook";
 import STACK_ABI from "../abi/BriseStack.json";
 import moment from "moment";
 import { Web3Button } from "@web3modal/react";
-import { useAccount, useDisconnect } from "wagmi";
+import { useAccount } from "wagmi";
 
 function BriseStake(props) {
   const { client } = props;
   const chain = client.getNetwork();
-  const acc = client.getAccount();
   const { isConnected } = useAccount();
-  const { library, account, isActive, chainId, handleWalletModal } = useMetaMask();
+  const { library, account, isActive, chainId } =
+    useMetaMask();
   var web3Obj = library;
-
   var Router = "0x8Ed91b2f3d9f6a5Ee426B4705F981090a7403795";
 
   const notify = (isError, msg) => {
@@ -33,10 +32,10 @@ function BriseStake(props) {
 
   const [dipositAmount, setDipositAmount] = useState("");
   const [timeperiod, setTimeperiod] = useState(0);
-  const [timeperiodDate, setTimeperiodDate] = useState(moment().add(30, "days").format("DD/MM/YYYY h:mm A"));
-  // const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [timeperiodDate, setTimeperiodDate] = useState(
+    moment().add(30, "days").format("DD/MM/YYYY h:mm A")
+  );
   const [balance, setBalance] = useState(0);
-
   const [stackContractInfo, setStackContractInfo] = useState({
     totalStakers: 0,
     totalStakedToken: 0,
@@ -81,7 +80,9 @@ function BriseStake(props) {
       var amountIn = dipositAmount * pow;
       amountIn = amountIn.toLocaleString("fullwide", { useGrouping: false });
 
-      var gas = await contract.methods.stake(timeperiod.toString()).estimateGas({ from: account, value: amountIn.toString() });
+      var gas = await contract.methods
+        .stake(timeperiod.toString())
+        .estimateGas({ from: account, value: amountIn.toString() });
 
       await contract.methods
         .stake(timeperiod.toString())
@@ -108,7 +109,6 @@ function BriseStake(props) {
           getStackerInfo();
           getBalance();
           notify(false, "Unstaked Succesfully!");
-          // withdrawModal();
         });
     } catch (err) {
       setLoadding(false);
@@ -139,9 +139,13 @@ function BriseStake(props) {
     try {
       var pow = Math.pow(10, 18);
       var contract = new web3Obj.eth.Contract(STACK_ABI, Router);
-      var totalStakedToken = await contract.methods.totalStakedToken.call().call();
+      var totalStakedToken = await contract.methods.totalStakedToken
+        .call()
+        .call();
       var totalStakers = await contract.methods.totalStakers.call().call();
-      var realtimeReward = await contract.methods.realtimeReward(account).call();
+      var realtimeReward = await contract.methods
+        .realtimeReward(account)
+        .call();
       var Stakers = await contract.methods.Stakers(account).call();
 
       var totalStakedTokenUser = Stakers.totalStakedTokenUser / pow;
@@ -152,15 +156,25 @@ function BriseStake(props) {
       Stakers.totalUnstakedTokenUser = totalUnstakedTokenUser;
       Stakers.currentStaked = currentStaked;
       Stakers.realtimeReward = realtimeReward / Math.pow(10, 18);
-      Stakers.totalClaimedRewardTokenUser = Stakers.totalClaimedRewardTokenUser / Math.pow(10, 18);
+      Stakers.totalClaimedRewardTokenUser =
+        Stakers.totalClaimedRewardTokenUser / Math.pow(10, 18);
       var stakersRecord = [];
       for (var i = 0; i < parseInt(Stakers.stakeCount); i++) {
-        var stakersRecordData = await contract.methods.stakersRecord(account, i).call();
-        var realtimeRewardPerBlock = await contract.methods.realtimeRewardPerBlock(account, i.toString()).call();
-        stakersRecordData.realtimeRewardPerBlock = realtimeRewardPerBlock[0] / Math.pow(10, 18);
+        var stakersRecordData = await contract.methods
+          .stakersRecord(account, i)
+          .call();
+        var realtimeRewardPerBlock = await contract.methods
+          .realtimeRewardPerBlock(account, i.toString())
+          .call();
+        stakersRecordData.realtimeRewardPerBlock =
+          realtimeRewardPerBlock[0] / Math.pow(10, 18);
 
-        stakersRecordData.unstaketime = moment.unix(stakersRecordData.unstaketime).format("DD/MM/YYYY h:mm A");
-        stakersRecordData.staketime = moment.unix(stakersRecordData.staketime).format("DD/MM/YYYY h:mm A");
+        stakersRecordData.unstaketime = moment
+          .unix(stakersRecordData.unstaketime)
+          .format("DD/MM/YYYY h:mm A");
+        stakersRecordData.staketime = moment
+          .unix(stakersRecordData.staketime)
+          .format("DD/MM/YYYY h:mm A");
         stakersRecord.push(stakersRecordData);
       }
       setStakersInfo(Stakers);
@@ -245,7 +259,9 @@ function BriseStake(props) {
                 </div>
                 <div className="all-info">
                   <div className="label-1">BRISE STAKERS</div>
-                  <div className="brise-stacked">{stackContractInfo.totalStakers}</div>
+                  <div className="brise-stacked">
+                    {stackContractInfo.totalStakers}
+                  </div>
                 </div>
               </div>
             </div>
@@ -268,8 +284,16 @@ function BriseStake(props) {
                         <h6>BRISE</h6>
                       </div>
                       <div className="label d-flex">
-                        <input type="text" placeholder="5000" value={dipositAmount} onChange={(e) => setDipositAmount(e.target.value)} />
-                        <button onClick={() => setMaxWithdrawal()} className="input-button">
+                        <input
+                          type="text"
+                          placeholder="5000"
+                          value={dipositAmount}
+                          onChange={(e) => setDipositAmount(e.target.value)}
+                        />
+                        <button
+                          onClick={() => setMaxWithdrawal()}
+                          className="input-button"
+                        >
                           max
                         </button>
                       </div>
@@ -282,7 +306,9 @@ function BriseStake(props) {
                       type="button"
                       onClick={async () => {
                         setTimeperiod(0);
-                        setTimeperiodDate(moment().add(30, "days").format("DD/MM/YYYY h:mm A"));
+                        setTimeperiodDate(
+                          moment().add(30, "days").format("DD/MM/YYYY h:mm A")
+                        );
                       }}
                       className={timeperiod === 0 ? "box active" : "box"}
                     >
@@ -292,7 +318,9 @@ function BriseStake(props) {
                       type="button"
                       onClick={async () => {
                         setTimeperiod(1);
-                        setTimeperiodDate(moment().add(60, "days").format("DD/MM/YYYY h:mm A"));
+                        setTimeperiodDate(
+                          moment().add(60, "days").format("DD/MM/YYYY h:mm A")
+                        );
                       }}
                       className={timeperiod === 1 ? "box active" : "box"}
                     >
@@ -302,7 +330,9 @@ function BriseStake(props) {
                       type="button"
                       onClick={async () => {
                         setTimeperiod(2);
-                        setTimeperiodDate(moment().add(90, "days").format("DD/MM/YYYY h:mm A"));
+                        setTimeperiodDate(
+                          moment().add(90, "days").format("DD/MM/YYYY h:mm A")
+                        );
                       }}
                       className={timeperiod === 2 ? "box active" : "box"}
                     >
@@ -312,7 +342,9 @@ function BriseStake(props) {
                       type="button"
                       onClick={async () => {
                         setTimeperiod(3);
-                        setTimeperiodDate(moment().add(180, "days").format("DD/MM/YYYY h:mm A"));
+                        setTimeperiodDate(
+                          moment().add(180, "days").format("DD/MM/YYYY h:mm A")
+                        );
                       }}
                       className={timeperiod === 3 ? "box active" : "box"}
                     >
@@ -335,7 +367,11 @@ function BriseStake(props) {
 
                   {isConnected ? (
                     chain.chain.id === 32520 ? (
-                      <button onClick={() => stake()} disabled={loading} className="btn btn-danger">
+                      <button
+                        onClick={() => stake()}
+                        disabled={loading}
+                        className="btn btn-danger"
+                      >
                         {loading ? "Please wait, Loading.." : "Stake"}
                       </button>
                     ) : (
@@ -344,13 +380,6 @@ function BriseStake(props) {
                       </button>
                     )
                   ) : (
-                    // <button
-                    //     onClick={() => handleWalletModal(true)}
-                    //     disabled={loading}
-                    //     className="btn btn-danger"
-                    // >
-                    //     {loading ? "Please wait, Loading.." : "Connect Wallet"}
-                    // </button>
                     <div style={{ display: "flex", justifyContent: "center" }}>
                       <Web3Button />
                     </div>
@@ -371,16 +400,24 @@ function BriseStake(props) {
                   <div className="first-box-section">
                     <div className="first-top">
                       <div className="title">BUSD Earned</div>
-                      <h4>{parseFloat(stakersInfo.realtimeReward).toFixed(10)}</h4>
+                      <h4>
+                        {parseFloat(stakersInfo.realtimeReward).toFixed(10)}
+                      </h4>
                     </div>
                     <div className="first-bottom">
                       <div className="content">
                         <div className="title">Claimed Reward</div>
-                        <h4>{parseFloat(stakersInfo.totalClaimedRewardTokenUser).toFixed(5)}</h4>
+                        <h4>
+                          {parseFloat(
+                            stakersInfo.totalClaimedRewardTokenUser
+                          ).toFixed(5)}
+                        </h4>
                       </div>
                       <div className="content">
                         <div className="title">Current Staked</div>
-                        <h4>{parseFloat(stakersInfo.currentStaked).toFixed(5)}</h4>
+                        <h4>
+                          {parseFloat(stakersInfo.currentStaked).toFixed(5)}
+                        </h4>
                       </div>
                     </div>
                   </div>
@@ -392,11 +429,19 @@ function BriseStake(props) {
                     <div className="first-bottom">
                       <div className="content">
                         <div className="title">Total Staked</div>
-                        <h4>{parseFloat(stakersInfo.totalStakedTokenUser).toFixed(5)}</h4>
+                        <h4>
+                          {parseFloat(stakersInfo.totalStakedTokenUser).toFixed(
+                            5
+                          )}
+                        </h4>
                       </div>
                       <div className="content">
                         <div className="title">Total UnStaked</div>
-                        <h4>{parseFloat(stakersInfo.totalUnstakedTokenUser).toFixed(5)}</h4>
+                        <h4>
+                          {parseFloat(
+                            stakersInfo.totalUnstakedTokenUser
+                          ).toFixed(5)}
+                        </h4>
                       </div>
                     </div>
                   </div>
@@ -451,7 +496,11 @@ function BriseStake(props) {
                             <h3>{row.unstaketime}</h3>
                           </div>
                           <div className="output">
-                            <h3>{parseFloat(row.realtimeRewardPerBlock).toFixed(10)}</h3>
+                            <h3>
+                              {parseFloat(row.realtimeRewardPerBlock).toFixed(
+                                10
+                              )}
+                            </h3>
                           </div>
                           <div className="output">
                             <h3>
@@ -459,7 +508,8 @@ function BriseStake(props) {
                                 <button
                                   className="btn"
                                   style={{
-                                    background: "linear-gradient(to right, #3867d0 20%, #2dbec9)",
+                                    background:
+                                      "linear-gradient(to right, #3867d0 20%, #2dbec9)",
                                     color: "#FFFFFF",
                                   }}
                                   disabled={true}
@@ -470,7 +520,8 @@ function BriseStake(props) {
                                 <button
                                   className="btn"
                                   style={{
-                                    background: "linear-gradient(to right, #3867d0 20%, #2dbec9)",
+                                    background:
+                                      "linear-gradient(to right, #3867d0 20%, #2dbec9)",
                                     color: "#FFFFFF",
                                   }}
                                   disabled={loading}
@@ -487,7 +538,8 @@ function BriseStake(props) {
                                 <button
                                   className="btn"
                                   style={{
-                                    background: "linear-gradient(to right, #3867d0 20%, #2dbec9)",
+                                    background:
+                                      "linear-gradient(to right, #3867d0 20%, #2dbec9)",
                                     color: "#FFFFFF",
                                   }}
                                   disabled={true}
@@ -498,7 +550,8 @@ function BriseStake(props) {
                                 <button
                                   className="btn"
                                   style={{
-                                    background: "linear-gradient(to right, #3867d0 20%, #2dbec9)",
+                                    background:
+                                      "linear-gradient(to right, #3867d0 20%, #2dbec9)",
                                     color: "#FFFFFF",
                                   }}
                                   disabled={loading}
